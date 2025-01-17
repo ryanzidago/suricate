@@ -14,6 +14,12 @@ use std::thread;
 struct Args {
     #[arg(long)]
     watched_path: String,
+
+    #[arg(long, value_parser, num_args = 0.., value_delimiter = ',')]
+    watched_extensions: Vec<String>,
+
+    #[arg(long, value_parser, num_args = 1.., value_delimiter = ',')]
+    commands: Vec<String>,
 }
 
 struct CommandState {
@@ -43,21 +49,25 @@ fn main() {
 
 fn handle_event(event: Event, args: &Args, command_state: Arc<Mutex<CommandState>>) {
     if event.kind.is_modify() {
-        if let Some(saved_path) = event.paths.iter().find(|path| is_elixir_file(path)) {
+        if let Some(saved_path) = event
+            .paths
+            .iter()
+            .find(|path| is_relevant_file(path, &args.watched_extensions))
+        {
             // Check if command is already running
             let mut state = command_state.lock().unwrap();
             if !state.is_running {
                 state.is_running = true;
 
                 println!("File {:?} has been modified", saved_path);
+
                 let command_state_clone = Arc::clone(&command_state);
+                let commands = args.commands.clone();
                 let watched_path = args.watched_path.to_owned();
-                let saved_path = saved_path.to_string_lossy().into_owned();
 
                 thread::spawn(move || {
                     let watched_path = Path::new(&watched_path);
-                    let saved_path = Path::new(&saved_path);
-                    execute_commands(watched_path, saved_path);
+                    execute_commands(commands, watched_path);
                     let mut state = command_state_clone.lock().unwrap();
                     state.is_running = false;
                 });
@@ -66,29 +76,46 @@ fn handle_event(event: Event, args: &Args, command_state: Arc<Mutex<CommandState
     }
 }
 
-fn is_elixir_file(path: &Path) -> bool {
+fn is_relevant_file(path: &Path, extensions: &Vec<String>) -> bool {
+    if extensions.is_empty() {
+        return true;
+    }
+
     if let Some(extension) = path.extension() {
-        matches!(
-            extension.to_str().expect("Could not read file extension"),
-            "ex" | "exs" | "heex"
-        )
+        let extension = extension.to_string_lossy().to_lowercase();
+        extensions.iter().any(|ext| ext == &extension)
     } else {
         false
     }
 }
-fn execute_commands(watched_path: &Path, saved_path: &Path) {
-    Command::new("mix")
-        .arg("format")
-        .arg(&saved_path)
-        .current_dir(&watched_path)
-        .status()
-        .expect("Could not format file");
 
-    Command::new("mix")
-        .arg("compile")
-        .current_dir(&watched_path)
-        .status()
-        .expect("Could not compile project");
+fn execute_commands(commands: Vec<String>, watched_path: &Path) {
+    let commands = commands
+        .into_iter()
+        .map(|cmd| cmd.trim().to_string())
+        .collect::<Vec<String>>();
+
+    for command in commands {
+        let parts = command.splitn(2, ' ').collect::<Vec<&str>>();
+        let (cmd, args) = if parts.len() == 2 {
+            (parts[0], parts[1])
+        } else {
+            (parts[0], "")
+        };
+
+        let mut cmd = Command::new(cmd);
+
+        if args.is_empty() {
+            println!("Running {:?}", cmd);
+        } else {
+            println!("Running {:?} with args {:?}", cmd, args);
+            cmd.args(args.split_whitespace());
+        }
+
+        cmd.current_dir(&watched_path)
+            .status()
+            .expect("Command execution failed");
+    }
 
     println!("");
 }
