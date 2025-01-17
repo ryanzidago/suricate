@@ -1,3 +1,4 @@
+
 use clap::Parser;
 use notify::Event;
 use notify::RecursiveMode;
@@ -16,11 +17,11 @@ struct Args {
     #[arg(short, long)]
     path: String,
 
-    /// The file extensions to watch for changes
+    /// A comma-separated list of file extensions to watch for changes
     #[arg(short, long, value_parser, num_args = 0.., value_delimiter = ',')]
     extensions: Vec<String>,
 
-    /// The commands to execute when a file matching the path and extension changes
+    /// A comma-separated list of commands to execute when a file matching the path and extension changes
     #[arg(short, long, value_parser, num_args = 1.., value_delimiter = ',')]
     commands: Vec<String>,
 }
