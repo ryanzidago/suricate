@@ -13,7 +13,7 @@ Options:
 
 Examples:
 ```bash
-suricate --path path/to/my/elixir/phoenix/live_view/app --extension='ex,exs,heex' --commands='mix format, mix compile'
+suricate --path path/to/my/phoenix/app --extension='ex,exs,heex' --commands='mix format, mix compile'
 ```
 
 ```bash
