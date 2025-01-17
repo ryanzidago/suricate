@@ -1,6 +1,6 @@
 # Suricate 
 
-CLI tool that executes speficied commands when a file changes matches a specific directory and extensions.
+CLI tool that executes specified commands when a file changes matches a specific directory and extensions.
 
 Usage: suricate [OPTIONS]
 
