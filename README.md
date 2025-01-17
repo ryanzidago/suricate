@@ -2,6 +2,12 @@
 
 CLI tool that executes specified commands when a file changes matches a specific directory and extensions.
 
+## Installation
+
+Clone this repository and then run `cargo build --release`.  You now have the executable in `./target/release/suricate`.
+
+## Usage
+
 Usage: suricate [OPTIONS]
 
 Options:
