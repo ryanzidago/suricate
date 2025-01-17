@@ -12,13 +12,13 @@ use std::thread;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(long)]
-    watched_path: String,
+    #[arg(short, long)]
+    path: String,
 
-    #[arg(long, value_parser, num_args = 0.., value_delimiter = ',')]
-    watched_extensions: Vec<String>,
+    #[arg(short, long, value_parser, num_args = 0.., value_delimiter = ',')]
+    extensions: Vec<String>,
 
-    #[arg(long, value_parser, num_args = 1.., value_delimiter = ',')]
+    #[arg(short, long, value_parser, num_args = 1.., value_delimiter = ',')]
     commands: Vec<String>,
 }
 
@@ -31,11 +31,11 @@ fn main() {
     let (tx, rx) = mpsc::channel::<Result<Event, notify::Error>>();
     let mut watcher = notify::recommended_watcher(tx).expect("Could not create file watcher");
     watcher
-        .watch(Path::new(&args.watched_path), RecursiveMode::Recursive)
+        .watch(Path::new(&args.path), RecursiveMode::Recursive)
         .expect("Could not watch directory");
 
     println!("Suricate starting ...");
-    println!("Watching directory: {}\n", args.watched_path);
+    println!("Watching directory: {}\n", args.path);
 
     let command_state = Arc::new(Mutex::new(CommandState { is_running: false }));
 
@@ -52,7 +52,7 @@ fn handle_event(event: Event, args: &Args, command_state: Arc<Mutex<CommandState
         if let Some(saved_path) = event
             .paths
             .iter()
-            .find(|path| is_relevant_file(path, &args.watched_extensions))
+            .find(|path| is_relevant_file(path, &args.extensions))
         {
             // Check if command is already running
             let mut state = command_state.lock().unwrap();
@@ -63,11 +63,11 @@ fn handle_event(event: Event, args: &Args, command_state: Arc<Mutex<CommandState
 
                 let command_state_clone = Arc::clone(&command_state);
                 let commands = args.commands.clone();
-                let watched_path = args.watched_path.to_owned();
+                let path = args.path.to_owned();
 
                 thread::spawn(move || {
-                    let watched_path = Path::new(&watched_path);
-                    execute_commands(commands, watched_path);
+                    let path = Path::new(&path);
+                    execute_commands(commands, path);
                     let mut state = command_state_clone.lock().unwrap();
                     state.is_running = false;
                 });
@@ -89,7 +89,7 @@ fn is_relevant_file(path: &Path, extensions: &Vec<String>) -> bool {
     }
 }
 
-fn execute_commands(commands: Vec<String>, watched_path: &Path) {
+fn execute_commands(commands: Vec<String>, path: &Path) {
     let commands = commands
         .into_iter()
         .map(|cmd| cmd.trim().to_string())
@@ -112,7 +112,7 @@ fn execute_commands(commands: Vec<String>, watched_path: &Path) {
             cmd.args(args.split_whitespace());
         }
 
-        cmd.current_dir(&watched_path)
+        cmd.current_dir(&path)
             .status()
             .expect("Command execution failed");
     }
