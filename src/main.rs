@@ -143,3 +143,27 @@ fn execute_commands(commands: Vec<String>, path: &Path) {
 
     println!("");
 }
+
+mod tests {
+    #[cfg(test)]
+    use super::*;
+
+    #[test]
+    fn test_is_relevant_file() {
+        let extensions = vec!["rs".to_string(), "toml".to_string()];
+
+        assert_eq!(
+            is_relevant_file(Path::new("src/main.rs"), &extensions),
+            true
+        );
+        assert_eq!(
+            is_relevant_file(Path::new("src/main.toml"), &extensions),
+            true
+        );
+        assert_eq!(
+            is_relevant_file(Path::new("src/main.txt"), &extensions),
+            false
+        );
+        assert_eq!(is_relevant_file(Path::new("src/main"), &extensions), false)
+    }
+}
