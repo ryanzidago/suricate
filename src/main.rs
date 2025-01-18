@@ -1,8 +1,8 @@
-
 use clap::Parser;
 use notify::Event;
 use notify::RecursiveMode;
 use notify::Watcher;
+use regex::Regex;
 use std::path::Path;
 use std::process::Command;
 use std::sync::mpsc;
@@ -94,31 +94,51 @@ fn is_relevant_file(path: &Path, extensions: &Vec<String>) -> bool {
 }
 
 fn execute_commands(commands: Vec<String>, path: &Path) {
+    let env_regex = Regex::new(r"^([A-Z_][A-Z0-9_]*)=(.*)$").unwrap();
+
     let commands = commands
         .into_iter()
         .map(|cmd| cmd.trim().to_string())
         .collect::<Vec<String>>();
 
     for command in commands {
-        let parts = command.splitn(2, ' ').collect::<Vec<&str>>();
-        let (cmd, args) = if parts.len() == 2 {
-            (parts[0], parts[1])
-        } else {
-            (parts[0], "")
-        };
+        let mut env_vars: Vec<String> = Vec::new();
+        let mut cmd_parts: Vec<String> = Vec::new();
 
-        let mut cmd = Command::new(cmd);
+        let parts = command.split(' ').collect::<Vec<&str>>();
 
-        if args.is_empty() {
-            println!("Running {:?}", cmd);
-        } else {
-            println!("Running {:?} with args {:?}", cmd, args);
-            cmd.args(args.split_whitespace());
+        println!("parts: {:?}", parts);
+
+        for part in parts.iter() {
+            if env_regex.is_match(part) {
+                env_vars.push(part.to_string());
+            } else {
+                cmd_parts.push(part.to_string());
+            }
         }
+
+        println!("cmd_parts: {:?}", cmd_parts);
+        println!("env_vars: {:?}", env_vars);
+
+        let mut cmd = Command::new(&cmd_parts[0]);
+
+        for env_var in env_vars.iter() {
+            if let Some((key, value)) = env_var.split_once('=') {
+                cmd.env(key, value);
+            }
+        }
+
+        if cmd_parts.len() > 1 {
+            cmd.args(&cmd_parts[1..]);
+        }
+
+        println!("Executing command: {:?}", cmd);
 
         cmd.current_dir(&path)
             .status()
             .expect("Command execution failed");
+
+        cmd.env_clear();
     }
 
     println!("");
