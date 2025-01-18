@@ -164,6 +164,31 @@ mod tests {
             is_relevant_file(Path::new("src/main.txt"), &extensions),
             false
         );
-        assert_eq!(is_relevant_file(Path::new("src/main"), &extensions), false)
+        assert_eq!(is_relevant_file(Path::new("src/main"), &extensions), false);
+    }
+
+    #[test]
+    fn test_is_relevant_file_with_empty_extensions() {
+        let empty_extensions: Vec<String> = Vec::new();
+
+        assert_eq!(
+            is_relevant_file(Path::new("src/main.rs"), &empty_extensions),
+            true
+        );
+
+        assert_eq!(
+            is_relevant_file(Path::new("src/main.toml"), &empty_extensions),
+            true
+        );
+
+        assert_eq!(
+            is_relevant_file(Path::new("src/main.txt"), &empty_extensions),
+            true
+        );
+
+        assert_eq!(
+            is_relevant_file(Path::new("src/main"), &empty_extensions),
+            true
+        );
     }
 }
